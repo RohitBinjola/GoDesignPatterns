@@ -1,63 +1,104 @@
-// Stategy Design Pattern in Go?
+// Prototype Design Pattern in Go?
 // 1. What ?
 // 2. Why ?
-// 3. How ? (Interfaces, Structs and Receiver Functions)
-// 4. Pros and Cons
+// 3. How ? (Structs, Interfaces and Receiver Functions)
 
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
-type IDBconnection interface { // struct can be assigned any type in runtime
-	Connect()
+type ShapeType int // Define Custom type here
+
+const (
+	CircleType ShapeType = 1
+	SquareType ShapeType = 2
+)
+
+type Shape interface {
+	GetId() ShapeType // Get the Shape Id
+	PrintTypeProp()   // used for printing proerty values of the Shape
+	Clone() Shape     // used for getting DeepCopy
 }
 
-type DBConnection struct {
-	Db IDBconnection // Compatible to accept any type in runtime
+// Implement Circle
+type Circle struct {
+	Id            ShapeType
+	Radius        int
+	Diameter      int
+	Circumference int
 }
 
-func (con DBConnection) DBConnect() { // Receiver Function for struct DBConnection
-	con.Db.Connect()
+func NewCircle(radius, diameter, circumference int) Circle {
+	return Circle{CircleType, radius, diameter, circumference}
 }
 
-// Lets implement First behaviour to connect to MySql
-type MySqlConnection struct {
-	ConnectionString string
+func (c Circle) GetId() ShapeType {
+	return c.Id
 }
 
-func (con MySqlConnection) Connect() { // Receiver Function for struct MySqlConnection
-	fmt.Println(("MySql " + con.ConnectionString))
+func (c Circle) Clone() Shape { // Prototyping
+	return NewCircle(c.Radius, c.Diameter, c.Circumference)
 }
 
-// Second Behaviour
-type PostgressConnection struct {
-	ConnectionString string
+func (c Circle) PrintTypeProp() {
+	fmt.Println("Circle Properties Radius, Diameter, Circumference:", c.Radius, c.Diameter, c.Circumference)
 }
 
-func (con PostgressConnection) Connect() {
-	fmt.Println("Postgress " + con.ConnectionString)
+type Square struct {
+	Id      ShapeType
+	Length  int
+	Breadth int
 }
 
-// Third Behaviour
-type MongoDbConnection struct {
-	ConnectionString string
+func NewSquare(Length, Breadth int) Square {
+	return Square{SquareType, Length, Breadth}
 }
 
-func (con MongoDbConnection) Connect() {
-	fmt.Println("MongoDb " + con.ConnectionString)
+func (s Square) GetId() ShapeType {
+	return s.Id
+}
+
+func (s Square) Clone() Shape {
+	return NewSquare(s.Length, s.Breadth)
+}
+
+func (s Square) PrintTypeProp() {
+	fmt.Println("Square Properties Length, Breadth: ", s.Length, s.Breadth)
+}
+
+var RegistryList = make(map[int]Shape) // Prototype registry
+
+func loadToRegistry() {
+	circle := NewCircle(50, 40, 15)
+	RegistryList[int(circle.GetId())] = circle // Adding circle to registry
+
+	square := NewSquare(50, 40)
+	RegistryList[int(square.GetId())] = square // Adding square to registry
 }
 
 func main() {
+	loadToRegistry() // Load new objects data to Registry
 
-	MySqlConnection := MySqlConnection{ConnectionString: "MySql DB is connected"}
-	con := DBConnection{Db: MySqlConnection}
-	con.DBConnect()
+	square := RegistryList[int(SquareType)]
+	sq, ok := square.(Square) // Type Assertion
+	if ok {
+		fmt.Println("Old Properties:")
+		sq.PrintTypeProp()
+		newSquare := sq.Clone() // Prototype
+		fmt.Println("Cloned object Properties:")
+		newSquare.PrintTypeProp()
+	}
 
-	pgConnection := PostgressConnection{ConnectionString: "Postgress DB is connected"}
-	con2 := DBConnection{Db: pgConnection}
-	con2.DBConnect()
-
-	mgConnection := MongoDbConnection{ConnectionString: "Mongo DB is connected"}
-	con3 := DBConnection{Db: mgConnection}
-	con3.DBConnect()
+	circle := RegistryList[int(CircleType)]
+	cr, ok := circle.(Circle) // Type Assertion
+	if ok {
+		fmt.Println("Old Properties:")
+		cr.PrintTypeProp()
+		newCircle := cr.Clone().(Circle) // Prototype i.e. Cloning existing object
+		newCircle.Radius = 35            // Changing property of the prototype without effecting the original object
+		fmt.Println("Cloned object Changed Properties:")
+		newCircle.PrintTypeProp()
+	}
 }
